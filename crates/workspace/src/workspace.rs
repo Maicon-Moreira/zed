@@ -6688,7 +6688,6 @@ impl Workspace {
         };
 
         let top = self.bounds.size.height - bottom_height;
-        let handle_size = RESIZE_HANDLE_SIZE * 2.0;
 
         Some(
             div()
@@ -6705,10 +6704,10 @@ impl Workspace {
                 })
                 .occlude()
                 .absolute()
-                .left(left - handle_size / 2.)
-                .top(top - handle_size / 2.)
-                .w(handle_size)
-                .h(handle_size)
+                .left(left - RESIZE_HANDLE_SIZE / 2.)
+                .top(top - RESIZE_HANDLE_SIZE / 2.)
+                .w(RESIZE_HANDLE_SIZE)
+                .h(RESIZE_HANDLE_SIZE)
                 .cursor(cursor),
         )
     }
