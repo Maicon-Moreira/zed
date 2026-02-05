@@ -6679,18 +6679,16 @@ impl Workspace {
         let (left, cursor) = match corner {
             DockCorner::LeftBottom => {
                 let left_width = self.left_dock.read(cx).active_panel_size(window, cx)?;
-                (left_width, CursorStyle::ResizeUpLeftDownRight)
+                (left_width, CursorStyle::Crosshair)
             }
             DockCorner::RightBottom => {
                 let right_width = self.right_dock.read(cx).active_panel_size(window, cx)?;
-                (
-                    self.bounds.size.width - right_width,
-                    CursorStyle::ResizeUpRightDownLeft,
-                )
+                (self.bounds.size.width - right_width, CursorStyle::Crosshair)
             }
         };
 
         let top = self.bounds.size.height - bottom_height;
+        let handle_size = RESIZE_HANDLE_SIZE * 2.0;
 
         Some(
             div()
@@ -6707,10 +6705,10 @@ impl Workspace {
                 })
                 .occlude()
                 .absolute()
-                .left(left - RESIZE_HANDLE_SIZE / 2.)
-                .top(top - RESIZE_HANDLE_SIZE / 2.)
-                .w(RESIZE_HANDLE_SIZE)
-                .h(RESIZE_HANDLE_SIZE)
+                .left(left - handle_size / 2.)
+                .top(top - handle_size / 2.)
+                .w(handle_size)
+                .h(handle_size)
                 .cursor(cursor),
         )
     }
