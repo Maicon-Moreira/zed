@@ -6664,6 +6664,57 @@ impl Workspace {
         )
     }
 
+    fn render_dock_corner_resize_handle(
+        &self,
+        corner: DockCorner,
+        window: &Window,
+        cx: &mut App,
+    ) -> Option<Stateful<Div>> {
+        if self.zoomed.is_some() || self.modal_layer.read(cx).has_active_modal() {
+            return None;
+        }
+
+        let bottom_height = self.bottom_dock.read(cx).active_panel_size(window, cx)?;
+
+        let (left, cursor) = match corner {
+            DockCorner::LeftBottom => {
+                let left_width = self.left_dock.read(cx).active_panel_size(window, cx)?;
+                (left_width, CursorStyle::ResizeUpLeftDownRight)
+            }
+            DockCorner::RightBottom => {
+                let right_width = self.right_dock.read(cx).active_panel_size(window, cx)?;
+                (
+                    self.bounds.size.width - right_width,
+                    CursorStyle::ResizeUpRightDownLeft,
+                )
+            }
+        };
+
+        let top = self.bounds.size.height - bottom_height;
+
+        Some(
+            div()
+                .id(match corner {
+                    DockCorner::LeftBottom => "dock-corner-resize-handle-left-bottom",
+                    DockCorner::RightBottom => "dock-corner-resize-handle-right-bottom",
+                })
+                .on_drag(DraggedDockCorner(corner), |corner, _, _, cx| {
+                    cx.stop_propagation();
+                    cx.new(|_| corner.clone())
+                })
+                .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation();
+                })
+                .occlude()
+                .absolute()
+                .left(left - RESIZE_HANDLE_SIZE / 2.)
+                .top(top - RESIZE_HANDLE_SIZE / 2.)
+                .w(RESIZE_HANDLE_SIZE)
+                .h(RESIZE_HANDLE_SIZE)
+                .cursor(cursor),
+        )
+    }
+
     pub fn for_window(window: &mut Window, _: &mut App) -> Option<Entity<Workspace>> {
         window.root().flatten()
     }
@@ -7137,6 +7188,21 @@ impl Render for DraggedDock {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum DockCorner {
+    LeftBottom,
+    RightBottom,
+}
+
+#[derive(Clone)]
+struct DraggedDockCorner(DockCorner);
+
+impl Render for DraggedDockCorner {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        gpui::Empty
+    }
+}
+
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         static FIRST_PAINT: AtomicBool = AtomicBool::new(true);
@@ -7325,6 +7391,52 @@ impl Render for Workspace {
                                                         workspace.resize_bottom_dock(
                                                             workspace.bounds.bottom()
                                                                 - e.event.position.y,
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    }
+                                                };
+                                                workspace.serialize_workspace(window, cx);
+                                            }
+                                        },
+                                    ))
+                                    .on_drag_move(cx.listener(
+                                        move |workspace,
+                                              e: &DragMoveEvent<DraggedDockCorner>,
+                                              window,
+                                              cx| {
+                                            if workspace.previous_dock_drag_coordinates
+                                                != Some(e.event.position)
+                                            {
+                                                workspace.previous_dock_drag_coordinates =
+                                                    Some(e.event.position);
+
+                                                let bottom_size = workspace.bounds.bottom()
+                                                    - e.event.position.y;
+
+                                                match e.drag(cx).0 {
+                                                    DockCorner::LeftBottom => {
+                                                        workspace.resize_left_dock(
+                                                            e.event.position.x
+                                                                - workspace.bounds.left(),
+                                                            window,
+                                                            cx,
+                                                        );
+                                                        workspace.resize_bottom_dock(
+                                                            bottom_size,
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    }
+                                                    DockCorner::RightBottom => {
+                                                        workspace.resize_right_dock(
+                                                            workspace.bounds.right()
+                                                                - e.event.position.x,
+                                                            window,
+                                                            cx,
+                                                        );
+                                                        workspace.resize_bottom_dock(
+                                                            bottom_size,
                                                             window,
                                                             cx,
                                                         );
@@ -7672,6 +7784,24 @@ impl Render for Workspace {
                                                 cx,
                                             )),
                                     }
+                                })
+                                .when(self.zoomed.is_none(), |this| {
+                                    this.when_some(
+                                        self.render_dock_corner_resize_handle(
+                                            DockCorner::LeftBottom,
+                                            window,
+                                            cx,
+                                        ),
+                                        |this, handle| this.child(handle),
+                                    )
+                                    .when_some(
+                                        self.render_dock_corner_resize_handle(
+                                            DockCorner::RightBottom,
+                                            window,
+                                            cx,
+                                        ),
+                                        |this, handle| this.child(handle),
+                                    )
                                 })
                                 .children(self.zoomed.as_ref().and_then(|view| {
                                     let zoomed_view = view.upgrade()?;
