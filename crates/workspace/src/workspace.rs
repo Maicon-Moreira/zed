@@ -48,7 +48,7 @@ use gpui::{
     Focusable, Global, HitboxBehavior, Hsla, KeyContext, Keystroke, ManagedView, MouseButton,
     PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size, Stateful, Subscription,
     SystemWindowTabController, Task, Tiling, WeakEntity, WindowBounds, WindowHandle, WindowId,
-    WindowOptions, actions, canvas, point, relative, size, transparent_black,
+    WindowOptions, actions, canvas, deferred, point, relative, size, transparent_black,
 };
 pub use history_manager::*;
 pub use item::{
@@ -7789,7 +7789,8 @@ impl Render for Workspace {
                                             DockCorner::LeftBottom,
                                             window,
                                             cx,
-                                        ),
+                                        )
+                                        .map(|handle| deferred(handle).with_priority(1)),
                                         |this, handle| this.child(handle),
                                     )
                                     .when_some(
@@ -7797,7 +7798,8 @@ impl Render for Workspace {
                                             DockCorner::RightBottom,
                                             window,
                                             cx,
-                                        ),
+                                        )
+                                        .map(|handle| deferred(handle).with_priority(1)),
                                         |this, handle| this.child(handle),
                                     )
                                 })
