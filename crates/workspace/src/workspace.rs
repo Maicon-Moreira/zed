@@ -6679,11 +6679,14 @@ impl Workspace {
         let (left, cursor) = match corner {
             DockCorner::LeftBottom => {
                 let left_width = self.left_dock.read(cx).active_panel_size(window, cx)?;
-                (left_width, CursorStyle::Crosshair)
+                (left_width, CursorStyle::ResizeUpRightDownLeft)
             }
             DockCorner::RightBottom => {
                 let right_width = self.right_dock.read(cx).active_panel_size(window, cx)?;
-                (self.bounds.size.width - right_width, CursorStyle::Crosshair)
+                (
+                    self.bounds.size.width - right_width,
+                    CursorStyle::ResizeUpLeftDownRight,
+                )
             }
         };
 
